@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Daylist — Make room for what matters</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="masthead"><a class="brand" href="./" aria-label="Daylist home"><span aria-hidden="true">✓</span> daylist</a><span class="badge">Your space to focus</span></header>
+    <section class="intro" aria-labelledby="title"><p class="eyebrow" id="today">ONE THING AT A TIME</p><h1 id="title">A little more focus.<br>A little less noise.</h1><p>Capture your thoughts. Make a plan. Enjoy the progress.</p></section>
+    <section class="board" aria-labelledby="list-title">
+      <div class="board-heading"><div><p class="eyebrow">LET’S MAKE IT HAPPEN</p><h2 id="list-title">My tasks <span id="total-count">0</span></h2></div><span class="save-note" id="save-note">Saved on this device</span></div>
+      <p id="storage-warning" class="warning" role="alert" hidden></p>
+      <form id="add-form" class="add-form"><label class="sr-only" for="new-task">New task</label><span aria-hidden="true">+</span><input id="new-task" name="task" placeholder="What would you like to get done?" maxlength="250" required autocomplete="off"><button type="submit" class="primary">Add task <span aria-hidden="true">↗</span></button></form>
+      <div class="toolbar"><div class="filters" role="group" aria-label="Filter tasks"><button type="button" data-filter="all" aria-pressed="true">All tasks</button><button type="button" data-filter="active" aria-pressed="false">Active</button><button type="button" data-filter="completed" aria-pressed="false">Completed</button></div><span id="remaining"></span></div>
+      <ul id="task-list" aria-label="Tasks"></ul>
+      <div id="empty-state" class="empty"><div class="empty-icon" aria-hidden="true">✓</div><h3 id="empty-title">A fresh start.</h3><p id="empty-description">Add your first task and give your day a little direction.</p></div>
+      <footer class="board-footer"><span id="progress-label">Small steps, big things.</span><button type="button" id="clear-completed" disabled>Clear completed</button></footer>
+      <div class="progress-track" role="progressbar" aria-label="Task completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill"></div></div>
+    </section>
+    <p class="privacy">Just you and your plans. Stored in your browser, not on a server.</p>
+    <p id="announcement" class="sr-only" role="status" aria-live="polite"></p>
+  </main>
+</body>
+</html>
