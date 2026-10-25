@@ -1,52 +1,117 @@
-# Daylist
+# Java Playwright BDD framework
 
-A responsive, dependency-free to-do list application built with HTML, CSS, and JavaScript. This branch implements the to-do application requested after the repository bootstrap; the Java/Playwright framework has not been implemented here.
+Java 17 automation using **Playwright for Java, Maven, Cucumber JVM/Gherkin,
+and the JUnit Platform suite runner**. No JavaScript/TypeScript test code,
+Playwright JS configuration, or Node/npm installation is needed.
 
-## Run locally
+The application under test is **Daylist**, the existing dependency-free
+HTML/CSS/JavaScript to-do demo (`index.html`, `styles.css`, `app.js`). Its
+JavaScript is application code, not automation, and is preserved unchanged.
 
-From this repository, serve the files with any static HTTP server. For example, with Python 3 installed:
+## Prerequisites and clean-checkout execution
+
+Install JDK 17+ (CI uses Temurin 17) and Maven 3.9+. From the repository root:
 
 ```sh
-python3 -m http.server 8000 --bind 127.0.0.1
+mvn --batch-mode test-compile
+mvn --batch-mode exec:java -Dexec.args="install chromium"
+mvn --batch-mode verify
 ```
 
-Open <http://localhost:8000>. No build step, package installation, backend, or account is required. Use an HTTP server rather than opening `index.html` directly, since browser storage behavior for `file:` URLs varies.
+On Linux, install required system libraries as well (may require sudo):
 
-## Features
+```sh
+mvn --batch-mode exec:java -Dexec.args="install --with-deps chromium"
+```
 
-- Add, edit, delete, and complete tasks (up to 250 characters per title).
-- All, active, and completed filters; remaining-task count and progress indicator.
-- Clear completed tasks with confirmation.
-- Local persistence under the `daylist.tasks.v1` browser storage key.
-- Cross-tab updates, with last-write-wins behavior (not transactional collaboration).
-- Responsive light/dark styling, keyboard controls, visible focus, accessible labels, and live status announcements.
-- Empty states and visible storage-error warnings. Malformed stored data is not silently overwritten.
-- User-entered task text is rendered as text, never interpreted as HTML.
+Dependencies and build plugins are pinned in `pom.xml`: Playwright 1.56.0,
+Cucumber 7.30.0, and JUnit Platform 1.14.0. Playwright's Java distribution
+manages its own driver; do not install npm packages.
 
-## Files
+## What runs
 
-- `index.html`: semantic application markup.
-- `styles.css`: responsive layout, themes, reduced-motion support.
-- `app.js`: task state, rendering, interaction, validation, and storage.
+The `@smoke` feature verifies adding tasks (including literal markup text),
+completion and all three filters, remaining counts, and persistence of titles
+and completion across reload. Assertions use Playwright auto-waiting, not sleeps.
+Each scenario receives its own Playwright instance, browser, context, page,
+and loopback server on an OS-assigned free port. Storage is empty at scenario
+start but retained during that scenario's reloads.
 
-## Storage and privacy
+Cucumber PicoContainer injects scenario-scoped state into hooks and steps.
+The `After` hook attempts to attach a full-page PNG on failure, then always
+closes resources, including after partial setup failures. Execution is
+sequential; there is no shared mutable static browser/page state.
 
-Tasks are stored only in this browser profile for this origin (scheme, hostname, and port). They do not sync to another device. Clearing site data removes them; private browsing or blocked/full storage can prevent saving. Do not treat browser storage as encrypted or use this demo to store secrets. Other scripts on the same origin can access it.
+## Layout
 
-If saved data is corrupt or unsupported, the app displays a warning and permits temporary in-memory use without overwriting the original data. To recover, first back up the `daylist.tasks.v1` value in browser developer tools, then remove that key and reload. Failed writes are reported; subsequent changes retry saving.
+```text
+pom.xml
+src/test/java/com/daylist/
+  RunCucumberTest.java         JUnit Platform entry point
+  pages/DaylistPage.java       locators, interactions, web assertions
+  steps/DaylistSteps.java      Gherkin bindings
+  support/                    configuration, Java HTTP server, lifecycle/hooks
+src/test/resources/
+  features/daylist.feature
+  junit-platform.properties   glue, reports, sequential execution
+.github/workflows/java-bdd.yml
+```
 
-## Manual acceptance checklist
+## Configuration
 
-1. Add a task; reload and confirm it persists.
-2. Try an empty/whitespace-only task; confirm validation. Add text such as `<b>hello</b>`; confirm it stays literal text.
-3. Complete and reopen a task; verify counts, progress, filters, and persistence.
-4. Edit a task; save with Enter. Cancel another edit using Cancel or Escape.
-5. Delete an active task; clear completed tasks and test both confirmation choices.
-6. Open a second tab on the same origin; verify updates appear in it.
-7. Resize to a mobile viewport; navigate with Tab, Enter, and Space.
-8. Set the storage key to malformed JSON in developer tools, then reload; confirm a warning and no overwrite. Back up/remove that entry to reset.
-9. Block browser storage and verify a warning appears rather than an application crash.
+Pass JVM system properties to Maven:
 
-## Validation status
+| Property | Default | Meaning |
+| --- | --- | --- |
+| `baseUrl` | unset | Use the automatic local server; an absolute HTTP(S) URL bypasses it |
+| `browser` | `chromium` | `chromium`, `firefox`, or `webkit` |
+| `headless` | `true` | `true` or `false` |
 
-The files have been authored through the GitHub API. Browser execution and automated tests have not been run in this session; the checklist above is provided for verification, not as a claim of passing tests.
+```sh
+mvn exec:java -Dexec.args="install firefox"
+mvn test -Dbrowser=firefox
+mvn test -Dheadless=false
+mvn test -Dcucumber.filter.tags="@smoke"
+mvn test -DbaseUrl=http://127.0.0.1:8000/
+```
+
+The external URL must serve the same Daylist application, not a public demo
+site. You manage that external server's lifecycle. Normally no separate server
+is needed: the Java test-side server automatically serves only the three public
+app assets, binds only to `127.0.0.1`, and stops after each scenario. Maven
+supplies the repository root to it via `app.root`.
+
+To view the demo manually without running tests, JDK 18+ also offers
+`jwebserver -b 127.0.0.1 -p 8000 -d .` from the repository root; stop it with
+Ctrl+C. This optional command is not needed on the Java 17 test path.
+
+## Reports and CI
+
+- Cucumber HTML: `target/cucumber-reports/cucumber.html`
+- Cucumber JSON (including failure attachments): `target/cucumber-reports/cucumber.json`
+- JUnit/Surefire results: `target/surefire-reports/`
+
+Open the HTML report after a run. All reports/build output are ignored by Git;
+`mvn clean` removes them. GitHub Actions installs Java 17, Maven dependencies,
+Chromium and its Linux system libraries, runs `mvn verify`, and uploads reports
+even on failure. It uses no Node-based test commands.
+
+## Troubleshooting
+
+- **Browser executable missing:** rerun the Maven Playwright installation command
+  after changing Playwright versions. Its browser binaries are version-specific.
+- **Missing Linux libraries:** use `install --with-deps chromium` as above.
+- **Headed launch fails:** use headless mode on servers, or provide a display/Xvfb.
+- **Download/proxy errors:** Maven Central and Playwright browser download hosts
+  must be reachable; configure your organization's Maven/proxy settings.
+- **Connection refused with `baseUrl`:** start your external Daylist server and
+  verify the URL, or omit the override to use the automatic Java server.
+- **No scenarios discovered:** use `mvn test`/`mvn verify` so the suite runner
+  and classpath resources are included; do not launch step classes directly.
+
+## Daylist storage
+
+Tasks live only in browser local storage (`daylist.tasks.v1`), scoped to origin;
+there is no backend or account. Do not store secrets in this demo. Invalid
+stored data produces a warning without overwriting it. Test contexts are
+disposable and do not touch your normal browser profile.
